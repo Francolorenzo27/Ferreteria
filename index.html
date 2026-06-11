@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control de Stock — Ferretería El Perno de Oro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:    #0f1f3d;
+      --navy2:   #162847;
+      --navy3:   #1e3a5f;
+      --steel:   #3a5f82;
+      --sky:     #4a9aba;
+      --mint:    #2ecc99;
+      --amber:   #f0a500;
+      --danger:  #e05252;
+      --white:   #f4f6fa;
+      --gray1:   #e2e8f0;
+      --gray2:   #b0bec5;
+      --gray3:   #607d8b;
+      --text:    #1a2540;
+      --sidebar-w: 240px;
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--white);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── SIDEBAR ──────────────────────────────── */
+    #sidebar {
+      width: var(--sidebar-w);
+      background: var(--navy);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      padding: 28px 20px 22px;
+      border-bottom: 1px solid var(--navy3);
+    }
+    .brand-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 1.5px;
+      color: #fff;
+      line-height: 1.1;
+    }
+    .brand-sub {
+      font-size: 10px;
+      color: var(--sky);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    nav { flex: 1; padding: 16px 0; }
+    .nav-section {
+      font-size: 9px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--gray3);
+      font-family: 'IBM Plex Mono', monospace;
+      padding: 12px 20px 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 20px;
+      cursor: pointer;
+      color: var(--gray2);
+      font-size: 13.5px;
+      font-weight: 400;
+      transition: background .15s, color .15s;
+      border-left: 3px solid transparent;
+      user-select: none;
+    }
+    .nav-item:hover { background: var(--navy2); color: #fff; }
+    .nav-item.active {
+      background: var(--navy2);
+      color: var(--sky);
+      border-left-color: var(--sky);
+      font-weight: 600;
+    }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--navy3);
+      font-size: 10.5px;
+      color: var(--gray3);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* ── MAIN CONTENT ─────────────────────────── */
+    #main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid var(--gray1);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .page-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      letter-spacing: 1px;
+      color: var(--navy);
+    }
+    .topbar-right { display: flex; align-items: center; gap: 14px; }
+    .badge-alert {
+      background: var(--danger);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-family: 'IBM Plex Mono', monospace;
+      display: none;
+    }
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: var(--gray1);
+      border-radius: 8px;
+      padding: 7px 12px;
+      gap: 8px;
+    }
+    .search-box input {
+      border: none;
+      background: transparent;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      width: 200px;
+      outline: none;
+    }
+    .search-box input::placeholder { color: var(--gray2); }
+
+    /* ── SECTIONS ─────────────────────────────── */
+    .section { display: none; padding: 30px 32px; animation: fadeIn .25s; }
+    .section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── KPI CARDS ────────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .kpi-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 22px 24px;
+      border: 1px solid var(--gray1);
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .kpi-card.blue::before   { background: var(--sky); }
+    .kpi-card.green::before  { background: var(--mint); }
+    .kpi-card.amber::before  { background: var(--amber); }
+    .kpi-card.red::before    { background: var(--danger); }
+
+    .kpi-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gray3);
+      font-family: 'IBM Plex Mono', monospace;
+      margin-bottom: 10px;
+    }
+    .kpi-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40px;
+      color: var(--navy);
+      letter-spacing: 1px;
+      line-height: 1;
+    }
+    .kpi-sub { font-size: 12px; color: var(--gray2); margin-top: 6px; }
+
+    /* ── TABLE ────────────────────────────────── */
+    .table-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid var(--gray1);
+      overflow: hidden;
+    }
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--gray1);
+    }
+    .table-title {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--navy);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead th {
+      background: #f8fafc;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--gray3);
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 600;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--gray1);
+    }
+    tbody tr {
+      border-bottom: 1px solid #f0f4f8;
+      transition: background .12s;
+    }
+    tbody tr:hover { background: #f8fafc; }
+    tbody tr:last-child { border-bottom: none; }
+    td {
+      padding: 13px 16px;
+      font-size: 13.5px;
+      color: var(--text);
+    }
+    .stock-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .stock-ok  { background: #e8f8f2; color: #1a9e6b; }
+    .stock-low { background: #fef3e2; color: #c07a00; }
+    .stock-out { background: #fdeaea; color: var(--danger); }
+    .cat-tag {
+      background: #e8f0fe;
+      color: #3a6bd6;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+    .action-btn {
+      background: none;
+      border: 1px solid var(--gray1);
+      border-radius: 6px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--gray3);
+      font-family: 'IBM Plex Sans', sans-serif;
+      transition: all .15s;
+      margin-right: 4px;
+    }
+    .action-btn:hover { border-color: var(--sky); color: var(--sky); }
+    .action-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+    .action-btn.in { color: var(--mint); border-color: var(--mint); }
+    .action-btn.out { color: var(--amber); border-color: var(--amber); }
+
+    /* ── FORMS ────────────────────────────────── */
+    .form-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid var(--gray1);
+      padding: 30px;
+      max-width: 620px;
+    }
+    .form-card h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 1px;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+    .form-card p { font-size: 13px; color: var(--gray3); margin-bottom: 24px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gray3); font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+    input[type=text], input[type=number], select {
+      border: 1.5px solid var(--gray1);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s;
+      background: #fff;
+    }
+    input:focus, select:focus { border-color: var(--sky); }
+    .btn {
+      padding: 11px 28px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all .15s;
+      letter-spacing: .3px;
+    }
+    .btn-primary { background: var(--navy); color: #fff; }
+    .btn-primary:hover { background: var(--navy3); }
+    .btn-success { background: var(--mint); color: #fff; }
+    .btn-success:hover { filter: brightness(1.1); }
+    .btn-warning { background: var(--amber); color: #fff; }
+    .btn-warning:hover { filter: brightness(1.1); }
+    .btn-danger  { background: var(--danger); color: #fff; }
+    .form-actions { margin-top: 24px; display: flex; gap: 12px; }
+
+    /* ── MOVEMENT FORM ────────────────────────── */
+    .mov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .mov-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid var(--gray1);
+      padding: 28px;
+    }
+    .mov-card h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .mov-card.entrada h2 { color: var(--mint); }
+    .mov-card.salida  h2 { color: var(--amber); }
+    .mov-card p { font-size: 12.5px; color: var(--gray3); margin-bottom: 20px; }
+
+    /* ── LOG TABLE ────────────────────────────── */
+    .mov-type-in  { color: var(--mint); font-weight: 700; font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+    .mov-type-out { color: var(--amber); font-weight: 700; font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+
+    /* ── ALERT BANNER ─────────────────────────── */
+    .alert-banner {
+      background: #fff8e6;
+      border: 1px solid #f0c050;
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-bottom: 22px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .alert-banner-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+    .alert-banner-text h4 { font-size: 13px; font-weight: 600; color: #92600a; margin-bottom: 4px; }
+    .alert-banner-text ul { list-style: none; }
+    .alert-banner-text li { font-size: 12.5px; color: #7a5000; margin-top: 2px; }
+    .alert-banner-text li::before { content: '▸ '; }
+
+    /* ── TOASTS ───────────────────────────────── */
+    #toast-container {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      background: var(--navy);
+      color: #fff;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      min-width: 260px;
+      border-left: 4px solid var(--sky);
+      animation: slideIn .25s;
+      box-shadow: 0 8px 24px rgba(0,0,0,.18);
+    }
+    .toast.success { border-left-color: var(--mint); }
+    .toast.warn    { border-left-color: var(--amber); }
+    .toast.error   { border-left-color: var(--danger); }
+    @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+
+    /* ── EMPTY STATE ──────────────────────────── */
+    .empty-row td { text-align: center; padding: 40px; color: var(--gray2); font-size: 13px; }
+
+    /* ── SECTION HEADER ───────────────────────── */
+    .section-header { margin-bottom: 24px; }
+    .section-header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 1px;
+      color: var(--navy);
+    }
+    .section-header p { font-size: 13px; color: var(--gray3); margin-top: 2px; }
+
+    /* ── PRICE ────────────────────────────────── */
+    .price { font-family: 'IBM Plex Mono', monospace; }
+
+    /* ── SCROLLBAR ────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--gray1); border-radius: 3px; }
+
+    /* ── CONFIRM MODAL ────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(15,31,61,.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 32px;
+      max-width: 380px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    }
+    .modal-box h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; color: var(--navy); }
+    .modal-box p  { font-size: 14px; color: var(--gray3); margin-bottom: 24px; }
+    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+
+    /* ── HISTORY TAB ──────────────────────────── */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-mini {
+      background: #fff;
+      border: 1px solid var(--gray1);
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-size: 13px;
+      color: var(--gray3);
+    }
+    .stat-mini strong {
+      display: block;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      color: var(--navy);
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="brand">
+    <div class="brand-title">🔩 El Perno de Oro</div>
+    <div class="brand-sub">Control de Stock</div>
+  </div>
+  <nav>
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="navigate('productos')">
+      <span class="nav-icon">📦</span> Productos
+    </div>
+    <div class="nav-section">Operaciones</div>
+    <div class="nav-item" onclick="navigate('agregar')">
+      <span class="nav-icon">➕</span> Agregar Producto
+    </div>
+    <div class="nav-item" onclick="navigate('movimientos')">
+      <span class="nav-icon">🔄</span> Movimientos
+    </div>
+    <div class="nav-section">Reportes</div>
+    <div class="nav-item" onclick="navigate('historial')">
+      <span class="nav-icon">📋</span> Historial
+    </div>
+    <div class="nav-item" onclick="navigate('alertas')">
+      <span class="nav-icon">⚠️</span> Alertas
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    UTN — Org. Empresarial 2026<br>
+    <span id="clock"></span>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="page-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-right">
+      <span class="badge-alert" id="badge-alert">⚠ Stock bajo</span>
+      <div class="search-box">
+        <span>🔍</span>
+        <input type="text" id="global-search" placeholder="Buscar producto..." oninput="filtrarTabla()" />
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <section class="section active" id="sec-dashboard">
+    <div class="section-header">
+      <h1>Dashboard General</h1>
+      <p>Resumen del estado actual del inventario — Ferretería El Perno de Oro</p>
+    </div>
+
+    <div id="alert-container"></div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card blue">
+        <div class="kpi-label">Total Productos</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+        <div class="kpi-sub">artículos registrados</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Valor Inventario</div>
+        <div class="kpi-value price" id="kpi-valor">—</div>
+        <div class="kpi-sub">stock × precio</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-label">Stock Bajo</div>
+        <div class="kpi-value" id="kpi-bajo">—</div>
+        <div class="kpi-sub">productos &lt; 5 unidades</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">Sin Stock</div>
+        <div class="kpi-value" id="kpi-sin">—</div>
+        <div class="kpi-sub">productos agotados</div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Estado del Inventario</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Stock</th>
+            <th>Precio Unit.</th>
+            <th>Valor Total</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="dash-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- PRODUCTOS -->
+  <section class="section" id="sec-productos">
+    <div class="section-header">
+      <h1>Listado de Productos</h1>
+      <p>Todos los artículos del inventario — usá el buscador para filtrar</p>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Inventario Completo</div>
+        <button class="btn btn-primary" onclick="navigate('agregar')">+ Agregar Producto</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Stock</th>
+            <th>Precio Unit.</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="prod-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- AGREGAR PRODUCTO -->
+  <section class="section" id="sec-agregar">
+    <div class="section-header">
+      <h1>Agregar Producto</h1>
+      <p>Registrá un nuevo artículo en el inventario</p>
+    </div>
+
+    <div class="form-card">
+      <h2>Nuevo Producto</h2>
+      <p>Completá todos los campos para registrar el artículo.</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nombre del Producto</label>
+          <input type="text" id="f-nombre" placeholder="Ej: Tornillo Hexagonal M8" />
+        </div>
+        <div class="form-group">
+          <label>Categoría</label>
+          <select id="f-cat">
+            <option value="">— Seleccionar —</option>
+            <option>Tornillería</option>
+            <option>Herramientas</option>
+            <option>Electricidad</option>
+            <option>Plomería</option>
+            <option>Pintura</option>
+            <option>Seguridad</option>
+            <option>Adhesivos</option>
+            <option>Medición</option>
+            <option>Otros</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Cantidad Inicial</label>
+          <input type="number" id="f-cantidad" placeholder="0" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Precio Unitario ($)</label>
+          <input type="number" id="f-precio" placeholder="0.00" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Stock Mínimo Alerta</label>
+          <input type="number" id="f-minimo" placeholder="5" min="1" value="5" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="agregarProducto()">✓ Guardar Producto</button>
+        <button class="btn" style="background:var(--gray1);color:var(--gray3)" onclick="limpiarForm()">Limpiar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOVIMIENTOS -->
+  <section class="section" id="sec-movimientos">
+    <div class="section-header">
+      <h1>Movimientos de Stock</h1>
+      <p>Registrá entradas (reposición) y salidas (venta / uso)</p>
+    </div>
+
+    <div class="mov-grid">
+      <!-- ENTRADA -->
+      <div class="mov-card entrada">
+        <h2>⬆ ENTRADA DE STOCK</h2>
+        <p>Reposición o compra de mercadería nueva</p>
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Producto</label>
+          <select id="m-prod-in"></select>
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Cantidad a Ingresar</label>
+          <input type="number" id="m-cant-in" placeholder="0" min="1" />
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label>Motivo / Referencia</label>
+          <input type="text" id="m-motivo-in" placeholder="Ej: Compra proveedor XYZ" />
+        </div>
+        <button class="btn btn-success" onclick="registrarMovimiento('entrada')" style="width:100%">
+          ⬆ Registrar Entrada
+        </button>
+      </div>
+
+      <!-- SALIDA -->
+      <div class="mov-card salida">
+        <h2>⬇ SALIDA DE STOCK</h2>
+        <p>Venta, uso en obra o pérdida de mercadería</p>
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Producto</label>
+          <select id="m-prod-out"></select>
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Cantidad a Retirar</label>
+          <input type="number" id="m-cant-out" placeholder="0" min="1" />
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label>Motivo / Referencia</label>
+          <input type="text" id="m-motivo-out" placeholder="Ej: Venta cliente #042" />
+        </div>
+        <button class="btn btn-warning" onclick="registrarMovimiento('salida')" style="width:100%">
+          ⬇ Registrar Salida
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HISTORIAL -->
+  <section class="section" id="sec-historial">
+    <div class="section-header">
+      <h1>Historial de Movimientos</h1>
+      <p>Registro cronológico de todas las entradas y salidas</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat-mini"><strong id="h-total">0</strong>movimientos totales</div>
+      <div class="stat-mini"><strong id="h-ent">0</strong>entradas registradas</div>
+      <div class="stat-mini"><strong id="h-sal">0</strong>salidas registradas</div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Log de Movimientos</div>
+        <button class="btn" style="background:var(--gray1);color:var(--gray3);font-size:12px" onclick="limpiarHistorial()">🗑 Limpiar todo</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Fecha y Hora</th>
+            <th>Tipo</th>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Stock Resultante</th>
+            <th>Motivo</th>
+          </tr>
+        </thead>
+        <tbody id="hist-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ALERTAS -->
+  <section class="section" id="sec-alertas">
+    <div class="section-header">
+      <h1>Alertas de Stock</h1>
+      <p>Productos que requieren atención inmediata</p>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Productos con Stock Bajo o Sin Stock</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Stock Actual</th>
+            <th>Mínimo</th>
+            <th>Estado</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="alert-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-box">
+    <h3 id="modal-title">Confirmar</h3>
+    <p id="modal-msg">¿Estás seguro?</p>
+    <div class="modal-actions">
+      <button class="btn" style="background:var(--gray1);color:var(--gray3)" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger" id="modal-confirm-btn">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   DATOS Y ESTADO
+═══════════════════════════════════════════════════════ */
+let productos = [
+  { id: 1, nombre: "Tornillo Hexagonal M8 × 50mm",  categoria: "Tornillería",   stock: 320, precio: 45.00,  minimo: 50 },
+  { id: 2, nombre: "Llave Combinada 17mm",           categoria: "Herramientas",  stock: 12,  precio: 1850.00, minimo: 5  },
+  { id: 3, nombre: "Cable Unipolar 2.5mm² (×50m)",   categoria: "Electricidad",  stock: 4,   precio: 6200.00, minimo: 5  },
+  { id: 4, nombre: "Tarugo Fischer 8mm (caja ×100)", categoria: "Tornillería",   stock: 85,  precio: 380.00,  minimo: 20 },
+  { id: 5, nombre: "Pintura Látex Interior Blanco",  categoria: "Pintura",       stock: 2,   precio: 3800.00, minimo: 5  },
+  { id: 6, nombre: "Cinta Aisladora 19mm × 20m",     categoria: "Electricidad",  stock: 45,  precio: 250.00,  minimo: 10 },
+  { id: 7, nombre: "Broca HSS 8mm",                  categoria: "Herramientas",  stock: 0,   precio: 480.00,  minimo: 5  },
+  { id: 8, nombre: "Caño PVC Ø 32mm (×3m)",         categoria: "Plomería",      stock: 18,  precio: 1100.00, minimo: 8  },
+  { id: 9, nombre: "Silicona Neutra Transparente",   categoria: "Adhesivos",     stock: 3,   precio: 780.00,  minimo: 5  },
+  { id:10, nombre: "Casco de Seguridad Blanco",      categoria: "Seguridad",     stock: 7,   precio: 2200.00, minimo: 3  },
+];
+
+let historial = [
+  { id: 1, fecha: '10/05/2026 09:12', tipo: 'entrada', productoId: 1, productoNombre: 'Tornillo Hexagonal M8 × 50mm', cantidad: 200, stockResultante: 320, motivo: 'Compra proveedor Aceros del Norte' },
+  { id: 2, fecha: '10/05/2026 10:35', tipo: 'salida',  productoId: 2, productoNombre: 'Llave Combinada 17mm',         cantidad: 3,   stockResultante: 12,  motivo: 'Venta cliente #018' },
+  { id: 3, fecha: '11/05/2026 08:50', tipo: 'salida',  productoId: 5, productoNombre: 'Pintura Látex Interior Blanco', cantidad: 3,  stockResultante: 2,   motivo: 'Venta cliente #019' },
+];
+
+let nextId = 11;
+let nextHist = 4;
+let confirmCallback = null;
+
+/* ═══════════════════════════════════════════════════════
+   NAVEGACIÓN
+═══════════════════════════════════════════════════════ */
+const SECTION_TITLES = {
+  dashboard:    'Dashboard',
+  productos:    'Productos',
+  agregar:      'Agregar Producto',
+  movimientos:  'Movimientos',
+  historial:    'Historial',
+  alertas:      'Alertas de Stock',
+};
+
+function navigate(id) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelector(`[onclick="navigate('${id}')"]`).classList.add('active');
+  document.getElementById(`sec-${id}`).classList.add('active');
+  document.getElementById('topbar-title').textContent = SECTION_TITLES[id];
+
+  if (id === 'dashboard')    renderDashboard();
+  if (id === 'productos')    renderProductos();
+  if (id === 'movimientos')  renderMovimientos();
+  if (id === 'historial')    renderHistorial();
+  if (id === 'alertas')      renderAlertas();
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER DASHBOARD
+═══════════════════════════════════════════════════════ */
+function renderDashboard() {
+  const bajo  = productos.filter(p => p.stock > 0 && p.stock < p.minimo);
+  const sin   = productos.filter(p => p.stock === 0);
+  const valor = productos.reduce((a, p) => a + p.stock * p.precio, 0);
+
+  document.getElementById('kpi-total').textContent = productos.length;
+  document.getElementById('kpi-valor').textContent = '$' + valor.toLocaleString('es-AR');
+  document.getElementById('kpi-bajo').textContent  = bajo.length;
+  document.getElementById('kpi-sin').textContent   = sin.length;
+
+  // Badge topbar
+  const badge = document.getElementById('badge-alert');
+  if (bajo.length + sin.length > 0) {
+    badge.style.display = 'inline';
+    badge.textContent = `⚠ ${bajo.length + sin.length} alertas`;
+  } else { badge.style.display = 'none'; }
+
+  // Alert banner
+  const ac = document.getElementById('alert-container');
+  if (bajo.length + sin.length > 0) {
+    const items = [...sin.map(p => `⛔ ${p.nombre} — SIN STOCK`),
+                   ...bajo.map(p => `${p.nombre} — solo ${p.stock} ud.`)];
+    ac.innerHTML = `<div class="alert-banner">
+      <div class="alert-banner-icon">⚠️</div>
+      <div class="alert-banner-text">
+        <h4>¡Atención! ${bajo.length + sin.length} producto(s) con stock crítico</h4>
+        <ul>${items.map(i => `<li>${i}</li>`).join('')}</ul>
+      </div>
+    </div>`;
+  } else { ac.innerHTML = ''; }
+
+  // Tabla
+  const tbody = document.getElementById('dash-tbody');
+  tbody.innerHTML = '';
+  if (!productos.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No hay productos registrados.</td></tr>'; return; }
+  productos.forEach(p => {
+    const { cls, label } = estadoBadge(p);
+    tbody.innerHTML += `
+      <tr>
+        <td class="price">#${String(p.id).padStart(4,'0')}</td>
+        <td><strong>${p.nombre}</strong></td>
+        <td><span class="cat-tag">${p.categoria}</span></td>
+        <td>${p.stock}</td>
+        <td class="price">$${p.precio.toLocaleString('es-AR')}</td>
+        <td class="price">$${(p.stock * p.precio).toLocaleString('es-AR')}</td>
+        <td><span class="stock-badge ${cls}">${label}</span></td>
+      </tr>`;
+  });
+}
+
+function estadoBadge(p) {
+  if (p.stock === 0)           return { cls: 'stock-out', label: '⛔ Sin stock' };
+  if (p.stock < p.minimo)      return { cls: 'stock-low', label: `⚠ Bajo (${p.stock})` };
+  return { cls: 'stock-ok', label: `✓ OK (${p.stock})` };
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER PRODUCTOS
+═══════════════════════════════════════════════════════ */
+function renderProductos() {
+  const q = document.getElementById('global-search').value.toLowerCase();
+  const list = q ? productos.filter(p => p.nombre.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q)) : productos;
+  const tbody = document.getElementById('prod-tbody');
+  tbody.innerHTML = '';
+  if (!list.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No se encontraron productos.</td></tr>';
+    return;
+  }
+  list.forEach(p => {
+    const { cls, label } = estadoBadge(p);
+    tbody.innerHTML += `
+      <tr>
+        <td class="price">#${String(p.id).padStart(4,'0')}</td>
+        <td><strong>${p.nombre}</strong></td>
+        <td><span class="cat-tag">${p.categoria}</span></td>
+        <td><span class="stock-badge ${cls}">${label}</span></td>
+        <td class="price">$${p.precio.toLocaleString('es-AR')}</td>
+        <td>
+          <button class="action-btn in"  onclick="irMovimiento('entrada',${p.id})">⬆ Entrada</button>
+          <button class="action-btn out" onclick="irMovimiento('salida',${p.id})">⬇ Salida</button>
+          <button class="action-btn danger" onclick="confirmarBorrar(${p.id})">✕</button>
+        </td>
+      </tr>`;
+  });
+}
+
+function filtrarTabla() {
+  const sec = document.querySelector('.section.active');
+  if (sec && sec.id === 'sec-productos') renderProductos();
+}
+
+/* ═══════════════════════════════════════════════════════
+   AGREGAR PRODUCTO
+═══════════════════════════════════════════════════════ */
+function agregarProducto() {
+  const nombre   = document.getElementById('f-nombre').value.trim();
+  const categoria = document.getElementById('f-cat').value;
+  const cantidad = parseInt(document.getElementById('f-cantidad').value);
+  const precio   = parseFloat(document.getElementById('f-precio').value);
+  const minimo   = parseInt(document.getElementById('f-minimo').value) || 5;
+
+  if (!nombre)          return toast('Ingresá el nombre del producto.', 'warn');
+  if (!categoria)       return toast('Seleccioná una categoría.', 'warn');
+  if (isNaN(cantidad) || cantidad < 0) return toast('Cantidad inválida.', 'warn');
+  if (isNaN(precio)  || precio < 0)   return toast('Precio inválido.', 'warn');
+
+  const prod = { id: nextId++, nombre, categoria, stock: cantidad, precio, minimo };
+  productos.push(prod);
+
+  if (cantidad > 0) {
+    historial.unshift({ id: nextHist++, fecha: fechaHora(), tipo: 'entrada',
+      productoId: prod.id, productoNombre: prod.nombre,
+      cantidad, stockResultante: cantidad, motivo: 'Alta inicial de producto' });
+  }
+
+  limpiarForm();
+  toast(`"${nombre}" agregado con éxito.`, 'success');
+}
+
+function limpiarForm() {
+  ['f-nombre','f-cantidad','f-precio'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-cat').value = '';
+  document.getElementById('f-minimo').value = '5';
+}
+
+/* ═══════════════════════════════════════════════════════
+   MOVIMIENTOS
+═══════════════════════════════════════════════════════ */
+function renderMovimientos() {
+  ['m-prod-in','m-prod-out'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">— Seleccionar producto —</option>';
+    productos.forEach(p => {
+      sel.innerHTML += `<option value="${p.id}">${p.nombre} (stock: ${p.stock})</option>`;
+    });
+  });
+}
+
+function irMovimiento(tipo, id) {
+  navigate('movimientos');
+  setTimeout(() => {
+    const sel = document.getElementById(tipo === 'entrada' ? 'm-prod-in' : 'm-prod-out');
+    sel.value = id;
+  }, 50);
+}
+
+function registrarMovimiento(tipo) {
+  const selId = tipo === 'entrada' ? 'm-prod-in' : 'm-prod-out';
+  const cantId = tipo === 'entrada' ? 'm-cant-in' : 'm-cant-out';
+  const motId  = tipo === 'entrada' ? 'm-motivo-in' : 'm-motivo-out';
+
+  const prodId = parseInt(document.getElementById(selId).value);
+  const cant   = parseInt(document.getElementById(cantId).value);
+  const motivo = document.getElementById(motId).value.trim() || (tipo === 'entrada' ? 'Reposición' : 'Venta / uso');
+
+  if (!prodId) return toast('Seleccioná un producto.', 'warn');
+  if (!cant || cant <= 0) return toast('Cantidad debe ser mayor a 0.', 'warn');
+
+  const prod = productos.find(p => p.id === prodId);
+  if (!prod) return toast('Producto no encontrado.', 'error');
+
+  if (tipo === 'salida' && cant > prod.stock)
+    return toast(`Stock insuficiente. Solo hay ${prod.stock} unidades.`, 'error');
+
+  if (tipo === 'entrada') prod.stock += cant;
+  else                    prod.stock -= cant;
+
+  historial.unshift({ id: nextHist++, fecha: fechaHora(), tipo,
+    productoId: prod.id, productoNombre: prod.nombre,
+    cantidad: cant, stockResultante: prod.stock, motivo });
+
+  document.getElementById(cantId).value = '';
+  document.getElementById(motId).value  = '';
+  renderMovimientos();
+
+  const emoji = tipo === 'entrada' ? '⬆' : '⬇';
+  toast(`${emoji} ${tipo === 'entrada' ? 'Entrada' : 'Salida'} registrada: ${cant} ud. de "${prod.nombre}".`, 'success');
+
+  if (prod.stock < prod.minimo && prod.stock > 0)
+    setTimeout(() => toast(`⚠ Atención: "${prod.nombre}" tiene stock bajo (${prod.stock} ud.)`, 'warn'), 600);
+  if (prod.stock === 0)
+    setTimeout(() => toast(`⛔ ¡"${prod.nombre}" quedó sin stock!`, 'error'), 600);
+}
+
+/* ═══════════════════════════════════════════════════════
+   HISTORIAL
+═══════════════════════════════════════════════════════ */
+function renderHistorial() {
+  const ent = historial.filter(h => h.tipo === 'entrada').length;
+  const sal = historial.filter(h => h.tipo === 'salida').length;
+  document.getElementById('h-total').textContent = historial.length;
+  document.getElementById('h-ent').textContent   = ent;
+  document.getElementById('h-sal').textContent   = sal;
+
+  const tbody = document.getElementById('hist-tbody');
+  tbody.innerHTML = '';
+  if (!historial.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No hay movimientos registrados aún.</td></tr>';
+    return;
+  }
+  historial.forEach((h, i) => {
+    const cls   = h.tipo === 'entrada' ? 'mov-type-in' : 'mov-type-out';
+    const label = h.tipo === 'entrada' ? '⬆ ENTRADA' : '⬇ SALIDA';
+    tbody.innerHTML += `
+      <tr>
+        <td class="price">${historial.length - i}</td>
+        <td>${h.fecha}</td>
+        <td class="${cls}">${label}</td>
+        <td>${h.productoNombre}</td>
+        <td><strong>${h.cantidad}</strong></td>
+        <td>${h.stockResultante}</td>
+        <td>${h.motivo}</td>
+      </tr>`;
+  });
+}
+
+function limpiarHistorial() {
+  showConfirm('Limpiar Historial', '¿Seguro que querés eliminar todos los movimientos del historial?', () => {
+    historial = [];
+    nextHist  = 1;
+    renderHistorial();
+    toast('Historial limpiado.', 'success');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   ALERTAS
+═══════════════════════════════════════════════════════ */
+function renderAlertas() {
+  const criticos = productos.filter(p => p.stock < p.minimo);
+  const tbody = document.getElementById('alert-tbody');
+  tbody.innerHTML = '';
+  if (!criticos.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">✅ Todos los productos tienen stock suficiente.</td></tr>';
+    return;
+  }
+  criticos.forEach(p => {
+    const { cls, label } = estadoBadge(p);
+    tbody.innerHTML += `
+      <tr>
+        <td class="price">#${String(p.id).padStart(4,'0')}</td>
+        <td><strong>${p.nombre}</strong></td>
+        <td><span class="cat-tag">${p.categoria}</span></td>
+        <td><strong style="color:var(--danger)">${p.stock}</strong></td>
+        <td>${p.minimo}</td>
+        <td><span class="stock-badge ${cls}">${label}</span></td>
+        <td><button class="action-btn in" onclick="irMovimiento('entrada',${p.id})">⬆ Reponer</button></td>
+      </tr>`;
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   ELIMINAR PRODUCTO
+═══════════════════════════════════════════════════════ */
+function confirmarBorrar(id) {
+  const prod = productos.find(p => p.id === id);
+  showConfirm('Eliminar Producto',
+    `¿Seguro que querés eliminar "${prod.nombre}" del inventario? Esta acción no se puede deshacer.`,
+    () => {
+      productos = productos.filter(p => p.id !== id);
+      renderProductos();
+      toast(`"${prod.nombre}" eliminado del inventario.`, 'warn');
+    }
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   MODAL CONFIRMACIÓN
+═══════════════════════════════════════════════════════ */
+function showConfirm(title, msg, cb) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-msg').textContent   = msg;
+  confirmCallback = cb;
+  document.getElementById('confirm-modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  confirmCallback = null;
+}
+document.getElementById('modal-confirm-btn').onclick = () => {
+  if (confirmCallback) confirmCallback();
+  closeModal();
+};
+document.getElementById('confirm-modal').onclick = (e) => {
+  if (e.target === e.currentTarget) closeModal();
+};
+
+/* ═══════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════ */
+function toast(msg, type = '') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.style.opacity = '0', 3200);
+  setTimeout(() => el.remove(), 3600);
+}
+
+/* ═══════════════════════════════════════════════════════
+   RELOJ
+═══════════════════════════════════════════════════════ */
+function fechaHora() {
+  const d = new Date();
+  return d.toLocaleDateString('es-AR') + ' ' + d.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+}
+function tickClock() {
+  document.getElementById('clock').textContent = fechaHora();
+}
+tickClock();
+setInterval(tickClock, 30000);
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+renderDashboard();
+</script>
+</body>
+</html>
